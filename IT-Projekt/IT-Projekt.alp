@@ -257,7 +257,7 @@ import java.util.Map.Entry;]]></Import>
 						<UnitType><![CDATA[NONE]]></UnitType>
 						<SdArray>false</SdArray>
 						<DefaultValue Class="CodeValue">
-							<Code><![CDATA[5]]></Code>
+							<Code><![CDATA[1]]></Code>
 						</DefaultValue>
 						<ParameterEditor>
 							<Id>1643837652530</Id>
@@ -511,6 +511,11 @@ do {
 	i++;	
 } while ((suche) && i < numberTaxis);
 
+do {
+	//Prüfe ob passenger auf aktiver Fahrt mitgenommen werden kann.
+} while (suche && i < numberTaxis);
+
+
 if (suche) {
 	passengerCollection.add(p);
 }
@@ -576,7 +581,7 @@ if (suche) {
 						<Parameter>
 							<Name><![CDATA[currentRange]]></Name>
 							<Value Class="CodeValue">
-								<Code><![CDATA[425000]]></Code>
+								<Code><![CDATA[60000]]></Code>
 							</Value>
 						</Parameter>
 						<Parameter>
@@ -1529,13 +1534,20 @@ import java.util.Map.Entry;]]></Import>
 					<Unit Class="SpeedUnits"><![CDATA[MPS]]></Unit>
 				</VelocityCode>
 				<OnArrival><![CDATA[//TODO Eventuell wartefunktion um das ein und ausladen zu simulieren
+//TODO If Konstruktion als Switch-Case
 
 if (state == 1) {
 	currentPassenger.changeState();
+} else if (state == 3 && packCollection.isEmpty()){
+	driveToStand();
+} else if (state == 3) {
+	driveToNext();
 } else {
 	packCollection.remove(currentPaket);
 	main.remove_paketstations(currentPaket);
 }
+
+//Was passiert wenn Taxi auf Paket wartet?
 if (state == 0) {
 	//wait
 } else {
@@ -1655,6 +1667,21 @@ if (state == 0) {
 						<Type><![CDATA[int]]></Type>        
 						<InitialValue Class="CodeValue">
 							<Code><![CDATA[0]]></Code>
+						</InitialValue>
+					</Properties>
+				</Variable>
+				<Variable Class="PlainVariable">
+					<Id>1647367189233</Id>
+					<Name><![CDATA[chargeNeeded]]></Name>
+					<X>60</X><Y>270</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" Constant="false" AccessType="public" StaticVariable="false">
+						<Type><![CDATA[boolean]]></Type>        
+						<InitialValue Class="CodeValue">
+							<Code><![CDATA[false]]></Code>
 						</InitialValue>
 					</Properties>
 				</Variable>
@@ -1880,9 +1907,9 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 	if (state == 1) {
 		for (Paket p : packCollection) {
 			if (paketAufStrecke(p)) {
+				state = 2;
 				this.moveTo(p);
 				reichweitenanpassung(p);
-				state = 2;
 				System.out.println("Liefere Paket!");
 				break;
 			}
@@ -1908,7 +1935,7 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 					<PublicFlag>false</PublicFlag>
 					<PresentationFlag>true</PresentationFlag>
 					<ShowLabel>true</ShowLabel>
-					<Body><![CDATA[if (!main.passengerCollection.isEmpty()) {
+					<Body><![CDATA[if (!main.passengerCollection.isEmpty() && state != 3) {
 	while (passCollection.size() < maxPassenger 
 		&& !(main.passengerCollection.isEmpty())) {
 		Passenger p = getNearestAgentByRoute(main.passengerCollection);
@@ -1966,8 +1993,8 @@ return r;]]></Body>
 					<PresentationFlag>true</PresentationFlag>
 					<ShowLabel>true</ShowLabel>
 					<Body><![CDATA[this.moveTo(currentPassenger);
-reichweitenanpassung(currentPassenger);
 state = 1;
+reichweitenanpassung(currentPassenger);
 System.out.println("Fahre");	
 		
 if (!(currentPassenger.waiting)) {
@@ -1991,7 +2018,7 @@ if (!(currentPassenger.waiting)) {
 					<Body><![CDATA[currentRange -= distanceTo(target); //Reichweitenanpassung
 if (currentRange < 50000) {
 	state = 3;
-	driveToStand();
+	chargeNeeded = true;
 	System.out.println("Muss laden!");
 }]]></Body>
 				</Function>
@@ -2008,7 +2035,8 @@ if (currentRange < 50000) {
 					<Body><![CDATA[moveTo(getNearestAgentByRoute(main.stands));
 state = 0;
 System.out.println("Wait at stand");
-currentRange = maxRange;]]></Body>
+currentRange = maxRange;
+chargeNeeded = false;]]></Body>
 				</Function>
 			</Functions>
 			<AgentLinks>
@@ -2459,6 +2487,28 @@ currentRange = maxRange;]]></Body>
 					<InternalLighting>OFF</InternalLighting>
 					<IgnoreSceneLights>false</IgnoreSceneLights>
 				</Figure3D>
+				<Text>
+					<Id>1647373122961</Id>
+					<Name><![CDATA[DROP]]></Name>
+					<X>5</X><Y>-25</Y>
+					<Label><X>0</X><Y>-10</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D</DrawMode>
+					<VisibleCode><![CDATA[!waiting]]></VisibleCode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<Rotation>0.0</Rotation>
+					<Color>-16777216</Color>
+					<Text><![CDATA[text]]></Text>
+					<Font>
+						<Name>SansSerif</Name>
+						<Size>10</Size>
+						<Style>0</Style>
+					</Font>
+					<Alignment>LEFT</Alignment>
+				</Text>
 			</Presentation>
 
 				</Level>

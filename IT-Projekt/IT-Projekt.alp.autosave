@@ -511,6 +511,11 @@ do {
 	i++;	
 } while ((suche) && i < numberTaxis);
 
+do {
+	//Prüfe ob passenger auf aktiver Fahrt mitgenommen werden kann.
+} while (suche && i < numberTaxis);
+
+
 if (suche) {
 	passengerCollection.add(p);
 }
@@ -1665,6 +1670,21 @@ if (state == 0) {
 						</InitialValue>
 					</Properties>
 				</Variable>
+				<Variable Class="PlainVariable">
+					<Id>1647367189233</Id>
+					<Name><![CDATA[chargeNeeded]]></Name>
+					<X>60</X><Y>270</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" Constant="false" AccessType="public" StaticVariable="false">
+						<Type><![CDATA[boolean]]></Type>        
+						<InitialValue Class="CodeValue">
+							<Code><![CDATA[false]]></Code>
+						</InitialValue>
+					</Properties>
+				</Variable>
 				<Variable Class="Parameter">
 					<Id>1547141812034</Id>
 					<Name><![CDATA[Model]]></Name>
@@ -1998,6 +2018,7 @@ if (!(currentPassenger.waiting)) {
 					<Body><![CDATA[currentRange -= distanceTo(target); //Reichweitenanpassung
 if (currentRange < 50000) {
 	state = 3;
+	chargeNeeded = true;
 	System.out.println("Muss laden!");
 }]]></Body>
 				</Function>
@@ -2014,7 +2035,8 @@ if (currentRange < 50000) {
 					<Body><![CDATA[moveTo(getNearestAgentByRoute(main.stands));
 state = 0;
 System.out.println("Wait at stand");
-currentRange = maxRange;]]></Body>
+currentRange = maxRange;
+chargeNeeded = false;]]></Body>
 				</Function>
 			</Functions>
 			<AgentLinks>
@@ -2465,6 +2487,28 @@ currentRange = maxRange;]]></Body>
 					<InternalLighting>OFF</InternalLighting>
 					<IgnoreSceneLights>false</IgnoreSceneLights>
 				</Figure3D>
+				<Text>
+					<Id>1647373122961</Id>
+					<Name><![CDATA[text]]></Name>
+					<X>5</X><Y>-25</Y>
+					<Label><X>0</X><Y>-10</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D</DrawMode>
+					<VisibleCode><![CDATA[!waiting]]></VisibleCode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<Rotation>0.0</Rotation>
+					<Color>-16777216</Color>
+					<Text><![CDATA[DROP]]></Text>
+					<Font>
+						<Name>SansSerif</Name>
+						<Size>10</Size>
+						<Style>0</Style>
+					</Font>
+					<Alignment>LEFT</Alignment>
+				</Text>
 			</Presentation>
 
 				</Level>
