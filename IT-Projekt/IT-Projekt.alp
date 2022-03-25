@@ -172,6 +172,21 @@ import java.util.Map.Entry;]]></Import>
 						</InitialValue>
 					</Properties>
 				</Variable>
+				<Variable Class="PlainVariable">
+					<Id>1647520592603</Id>
+					<Name><![CDATA[totalDistance]]></Name>
+					<X>1040</X><Y>160</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" Constant="false" AccessType="public" StaticVariable="false">
+						<Type><![CDATA[double]]></Type>        
+						<InitialValue Class="CodeValue">
+							<Code><![CDATA[0]]></Code>
+						</InitialValue>
+					</Properties>
+				</Variable>
 				<Variable Class="Parameter">
 					<Id>1546173557098</Id>
 					<Name><![CDATA[taxiSpeed]]></Name>
@@ -285,6 +300,31 @@ import java.util.Map.Entry;]]></Import>
 						</DefaultValue>
 						<ParameterEditor>
 							<Id>1646770946768</Id>
+							<EditorContolType>TEXT_BOX</EditorContolType>
+							<MinSliderValue><![CDATA[0]]></MinSliderValue>
+							<MaxSliderValue><![CDATA[100]]></MaxSliderValue>
+							<DelimeterType>NO_DELIMETER</DelimeterType>
+						</ParameterEditor>
+					</Properties>                 
+				</Variable>
+				<Variable Class="Parameter">
+					<Id>1647521509691</Id>
+					<Name><![CDATA[workingHours]]></Name>
+					<Description><![CDATA[Arbeitszeit des Taxis. Länge der Schicht.]]></Description>
+					<X>480</X><Y>-40</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" ModificatorType="STATIC">
+						<Type><![CDATA[double]]></Type>
+						<UnitType><![CDATA[NONE]]></UnitType>
+						<SdArray>false</SdArray>
+						<DefaultValue Class="CodeValue">
+							<Code><![CDATA[0.5]]></Code>
+						</DefaultValue>
+						<ParameterEditor>
+							<Id>1647521509689</Id>
 							<EditorContolType>TEXT_BOX</EditorContolType>
 							<MinSliderValue><![CDATA[0]]></MinSliderValue>
 							<MaxSliderValue><![CDATA[100]]></MaxSliderValue>
@@ -498,24 +538,37 @@ for (Paket p : paketCollection) {
 					</Parameter>
 					<Body><![CDATA[boolean suche = true;
 int i = 0;
+
+//Überprüft ob ein Taxi auf Passenger wartet
 do {	
 	Taxi t = taxis.get(i);
-	if (t.state == 0) {
+	if (t.state == 0 && t.working) {
 		System.out.println("Kunde zu Taxi zugeordnet");
 		t.passCollection.add(p);
 		t.state = 1;
-		t.driveToNext(); //startet die Schicht/Fahrten des Taxis
+		t.driveToNext(); //startet die Fahrten des Taxis
 		suche = false;
 		break;
 	}
 	i++;	
 } while ((suche) && i < numberTaxis);
 
-do {
-	//Prüfe ob passenger auf aktiver Fahrt mitgenommen werden kann.
-} while (suche && i < numberTaxis);
+//Überprüft ob ein fahrendes Taxi den Kunden mitnehmen kann
+if (suche) {
+	System.out.println("Passt der Kunde in ein Taxi?");
+	for (Taxi t : taxis) {
+		if (t.working && t.passengerAufStrecke(p)) {
+			t.passCollection.add(p);
+			t.state = 1;
+			t.driveToNext();
+			suche = false;
+			System.out.println("Kunde dynamisch zu Taxi hinzugefügt");
+			break;
+		}
+	}
+}
 
-
+//Fügt den Kunden zu der Collenction hinzu, wenn er nicht zuvor zugeordnet werden konnte
 if (suche) {
 	passengerCollection.add(p);
 }
@@ -1534,24 +1587,43 @@ import java.util.Map.Entry;]]></Import>
 					<Unit Class="SpeedUnits"><![CDATA[MPS]]></Unit>
 				</VelocityCode>
 				<OnArrival><![CDATA[//TODO Eventuell wartefunktion um das ein und ausladen zu simulieren
-//TODO If Konstruktion als Switch-Case
 
-if (state == 1) {
+switch (state) {
+case 0:
+	if (working) {
+		//Warte auf neue Kunden
+	} else {
+		driveToNextPaket();
+	}
+	break;
+case 1: 
+	//Kundenkontakt
 	currentPassenger.changeState();
-} else if (state == 3 && packCollection.isEmpty()){
-	driveToStand();
-} else if (state == 3) {
 	driveToNext();
-} else {
-	packCollection.remove(currentPaket);
+	break;
+case 2:
+	//Paket wurde ausgeliefert
+	System.out.println("CurrentPaket sollte gelöscht werden");
 	main.remove_paketstations(currentPaket);
-}
-
-//Was passiert wenn Taxi auf Paket wartet?
-if (state == 0) {
-	//wait
-} else {
 	driveToNext();
+	break;
+case 3:
+	//Taxi muss geladen werden
+	currentPassenger.changeState();
+	if (passCollection.isEmpty()) {
+		driveToStand();
+	} else {
+		driveToNext();
+	}
+	break;
+case 4: 
+	//Taxi im Depot
+	System.out.println("Fahre ins Depot!");
+	finishSimulation();
+	break;
+default:
+	driveToNext();
+	break;
 }]]></OnArrival>
 				<PhysicalLength Class="CodeUnitValue">
 					<Code><![CDATA[4.826]]></Code>
@@ -1657,7 +1729,8 @@ if (state == 0) {
 					<Description><![CDATA[0 = Taxi wartet auf zuordnung von Passergieren
 1 = Taxi fährt Kunden
 2 = Taxi liefert Paket ab
-3 = Taxi muss geladen werden]]></Description>
+3 = Taxi muss geladen werden
+4 = Taxi ist im Depot]]></Description>
 					<X>60</X><Y>250</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
@@ -1682,6 +1755,22 @@ if (state == 0) {
 						<Type><![CDATA[boolean]]></Type>        
 						<InitialValue Class="CodeValue">
 							<Code><![CDATA[false]]></Code>
+						</InitialValue>
+					</Properties>
+				</Variable>
+				<Variable Class="PlainVariable">
+					<Id>1647521589924</Id>
+					<Name><![CDATA[working]]></Name>
+					<Description><![CDATA[Zeigt an, ob das Taxi arbeitet. Wird bei erstellung auf true gesetzt. Nach der der Schicht wird durch endShift die Variable auf false gesetzt und das Taxi kehrt zum Depot zurück.]]></Description>
+					<X>60</X><Y>290</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" Constant="false" AccessType="public" StaticVariable="false">
+						<Type><![CDATA[boolean]]></Type>        
+						<InitialValue Class="CodeValue">
+							<Code><![CDATA[true]]></Code>
 						</InitialValue>
 					</Properties>
 				</Variable>
@@ -1861,7 +1950,7 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 					<Id>1646849755838</Id>
 					<Name><![CDATA[endBreak]]></Name>
 					<Description><![CDATA[Wenn ein Fahrzeug auf Kunden wartet und die passengerCollection nicht leer ist, sollen neue Paassenger ins Taxi gezogen werden.]]></Description>
-					<X>430</X><Y>120</Y>
+					<X>470</X><Y>40</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
 					<PresentationFlag>true</PresentationFlag>
@@ -1885,9 +1974,41 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 							<Code><![CDATA[1]]></Code>
 							<Unit Class="TimeUnits"><![CDATA[MINUTE]]></Unit>
 						</RecurrenceCode>
-						<Condition><![CDATA[!main.passengerCollection.isEmpty() && state == 0;]]></Condition>
+						<Condition><![CDATA[!main.passengerCollection.isEmpty() && state == 0]]></Condition>
 					</Properties>
 					<Action><![CDATA[pullPassengers();]]></Action>
+				</Event>
+				<Event>
+					<Id>1647521314771</Id>
+					<Name><![CDATA[endShift]]></Name>
+					<Description><![CDATA[Löst das ende der Schicht aus. Am ende sollen alle Passagiere, die in der List sind gefahren werden und alle Pakete im Auto abgeliefert werden. Danach soll das soll der das Taxi zurück ins Depot fahren.]]></Description>
+					<X>470</X><Y>70</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties TriggerType="timeout" Mode="occuresOnce">
+						<Timeout Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[MINUTE]]></Unit>
+						</Timeout>
+						<Rate Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="RateUnits"><![CDATA[PER_MINUTE]]></Unit>
+						</Rate>
+						<OccurrenceAtTime>true</OccurrenceAtTime>
+						<OccurrenceDate>1647590400000</OccurrenceDate>
+						<OccurrenceTime Class="CodeUnitValue">
+							<Code><![CDATA[main.workingHours]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[HOUR]]></Unit>
+						</OccurrenceTime>
+						<RecurrenceCode Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[MINUTE]]></Unit>
+						</RecurrenceCode>
+						<Condition><![CDATA[false]]></Condition>
+					</Properties>
+					<Action><![CDATA[working = false;]]></Action>
 				</Event>
 			</Events>
 			<Functions>
@@ -1920,8 +2041,12 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 	} else {
 		driveToNextPassenger();
 	}
-} else {
+} else if (working) {
 	pullPassengers();
+} else if (!packCollection.isEmpty()) {
+	driveToNextPaket();
+} else {
+	driveToDepot();
 }]]></Body>
 				</Function>
 				<Function AccessType="default" StaticFunction="false">
@@ -1930,7 +2055,7 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 					<Id>1646681438404</Id>
 					<Name><![CDATA[pullPassengers]]></Name>
 					<Description><![CDATA[Zieht neue Kunden aus der übergeordneten Passengercollction in die passCollection des Taxis.]]></Description>
-					<X>240</X><Y>180</Y>
+					<X>240</X><Y>210</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
 					<PresentationFlag>true</PresentationFlag>
@@ -1956,7 +2081,7 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 					<Id>1646835712081</Id>
 					<Name><![CDATA[paketAufStrecke]]></Name>
 					<Description><![CDATA[Wenn ein Paket auf der Strecke zum nächsten Kunden liegt, dann wird true zurückgegeben und das Paket als currentPaket zwischengespeichert.]]></Description>
-					<X>240</X><Y>210</Y>
+					<X>240</X><Y>240</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
 					<PresentationFlag>true</PresentationFlag>
@@ -1970,7 +2095,6 @@ vgl. https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/tesla/tesl
 double disPass = distanceTo(currentPassenger);
 double disWithPack = distanceTo(p) + getDistanceGIS(p.getLatitude(), p.getLongitude(), currentPassenger.getLatitude(), currentPassenger.getLongitude());
 double devTol = disWithPack / disPass;
-System.out.println(devTol);
 
 if (devTol < main.deviationTolerance) {
 	r = true;
@@ -1996,9 +2120,10 @@ return r;]]></Body>
 state = 1;
 reichweitenanpassung(currentPassenger);
 System.out.println("Fahre");	
-		
-if (!(currentPassenger.waiting)) {
+
+if (!currentPassenger.waiting) {
 	passCollection.remove(currentPassenger);
+	System.out.println("Passenger aus passCollection entfernt");
 }]]></Body>
 				</Function>
 				<Function AccessType="default" StaticFunction="false">
@@ -2006,7 +2131,7 @@ if (!(currentPassenger.waiting)) {
 					<ReturnType><![CDATA[double]]></ReturnType>
 					<Id>1646930672381</Id>
 					<Name><![CDATA[reichweitenanpassung]]></Name>
-					<X>240</X><Y>240</Y>
+					<X>470</X><Y>100</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
 					<PresentationFlag>true</PresentationFlag>
@@ -2015,7 +2140,8 @@ if (!(currentPassenger.waiting)) {
 						<Name><![CDATA[target]]></Name>
 						<Type><![CDATA[Agent]]></Type>
 					</Parameter>
-					<Body><![CDATA[currentRange -= distanceTo(target); //Reichweitenanpassung
+					<Body><![CDATA[currentRange -= distanceTo(target); //Verbrauch vom Auto
+main.totalDistance += distanceTo(target); //Insgesamt gefahrene Distanz
 if (currentRange < 50000) {
 	state = 3;
 	chargeNeeded = true;
@@ -2037,6 +2163,65 @@ state = 0;
 System.out.println("Wait at stand");
 currentRange = maxRange;
 chargeNeeded = false;]]></Body>
+				</Function>
+				<Function AccessType="default" StaticFunction="false">
+					<ReturnModificator>RETURNS_VALUE</ReturnModificator>
+					<ReturnType><![CDATA[boolean]]></ReturnType>
+					<Id>1647376033388</Id>
+					<Name><![CDATA[passengerAufStrecke]]></Name>
+					<X>240</X><Y>270</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Parameter>
+						<Name><![CDATA[p]]></Name>
+						<Type><![CDATA[Passenger]]></Type>
+					</Parameter>
+					<Body><![CDATA[boolean r;
+double disPass = distanceTo(currentPassenger);
+double disWithNewPass = distanceTo(p) + getDistanceGIS(p.getLatitude(), p.getLongitude(), currentPassenger.getLatitude(), currentPassenger.getLongitude());
+double devTol = disWithNewPass / disPass;
+System.out.println("Passenger in Taxi? " + devTol);
+
+if (devTol < main.deviationTolerance) {
+	currentPassenger = p;
+	r = true;
+	System.out.println("Passergier wird zur Tour hinzugefügt");
+} else {
+	r = false;
+}
+return r;]]></Body>
+				</Function>
+				<Function AccessType="default" StaticFunction="false">
+					<ReturnModificator>VOID</ReturnModificator>
+					<ReturnType><![CDATA[double]]></ReturnType>
+					<Id>1648120308681</Id>
+					<Name><![CDATA[driveToNextPaket]]></Name>
+					<X>240</X><Y>160</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Body><![CDATA[currentPaket = getNearestAgentByRoute(packCollection);
+packCollection.remove(currentPaket);
+state = 2;
+this.moveTo(currentPaket);
+reichweitenanpassung(currentPaket);]]></Body>
+				</Function>
+				<Function AccessType="default" StaticFunction="false">
+					<ReturnModificator>VOID</ReturnModificator>
+					<ReturnType><![CDATA[double]]></ReturnType>
+					<Id>1648120334978</Id>
+					<Name><![CDATA[driveToDepot]]></Name>
+					<X>240</X><Y>180</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Body><![CDATA[System.out.println("Fahre zurück zum Depot");
+state = 4;
+this.moveTo(main.depot);]]></Body>
 				</Function>
 			</Functions>
 			<AgentLinks>
@@ -2328,7 +2513,7 @@ chargeNeeded = false;]]></Body>
 				<Event>
 					<Id>1644763607361</Id>
 					<Name><![CDATA[waitingTimeEvent]]></Name>
-					<Description><![CDATA[Aktualisiert die Waitingtime einmal in der Minute]]></Description>
+					<Description><![CDATA[Aktualisiert die Waitingtime einmal in der Minute solange der Kunde auf ein Taxi wartet. Sobald der Kunde abgeholt worden ist, kann der Kunde nicht mehr verloren gehen.]]></Description>
 					<X>220</X><Y>50</Y>
 					<Label><X>10</X><Y>0</Y></Label>
 					<PublicFlag>false</PublicFlag>
@@ -2355,7 +2540,7 @@ chargeNeeded = false;]]></Body>
 						</RecurrenceCode>
 						<Condition><![CDATA[false]]></Condition>
 					</Properties>
-					<Action><![CDATA[if (!onTour) {
+					<Action><![CDATA[if (!onTour && waiting) {
 	waitingTime++;
 	if (waitingTime >= main.maxWaitTime) {
 		main.remove_passengers(this);
@@ -2379,10 +2564,11 @@ chargeNeeded = false;]]></Body>
 					<Body><![CDATA[if (waiting) {
 	waiting = false;
 	this.jumpTo(destination);
+	System.out.println("GOT");
 } else {
 	main.remove_passengers(this);
 	main.passengerTransported++;
-	System.out.println("Kunde wurde abgeliefert");
+	System.out.println("DROP");
 }]]></Body>
 				</Function>
 			</Functions>
@@ -2489,7 +2675,7 @@ chargeNeeded = false;]]></Body>
 				</Figure3D>
 				<Text>
 					<Id>1647373122961</Id>
-					<Name><![CDATA[DROP]]></Name>
+					<Name><![CDATA[text]]></Name>
 					<X>5</X><Y>-25</Y>
 					<Label><X>0</X><Y>-10</Y></Label>
 					<PublicFlag>true</PublicFlag>
@@ -2501,7 +2687,7 @@ chargeNeeded = false;]]></Body>
 					<Z>0</Z>
 					<Rotation>0.0</Rotation>
 					<Color>-16777216</Color>
-					<Text><![CDATA[text]]></Text>
+					<Text><![CDATA[DROP]]></Text>
 					<Font>
 						<Name>SansSerif</Name>
 						<Size>10</Size>
@@ -3552,7 +3738,7 @@ chargeNeeded = false;]]></Body>
 			<ClientAreaTopLeft><X>0</X><Y>0</Y></ClientAreaTopLeft>
 			<CommandLineArguments><![CDATA[]]></CommandLineArguments>
 			<MaximumMemory>4096</MaximumMemory>
-			<RandomNumberGenerationType>fixedSeed</RandomNumberGenerationType>
+			<RandomNumberGenerationType>randomSeed</RandomNumberGenerationType>
 			<CustomGeneratorCode>new Random()</CustomGeneratorCode>
 			<SeedValue>1</SeedValue>
 			<SelectionModeForSimultaneousEvents>LIFO</SelectionModeForSimultaneousEvents>
@@ -3599,6 +3785,9 @@ chargeNeeded = false;]]></Body>
 				<Parameter>
 					<ParameterName><![CDATA[deviationTolerance]]></ParameterName>
 				</Parameter>
+				<Parameter>
+					<ParameterName><![CDATA[workingHours]]></ParameterName>
+				</Parameter>
 			</Parameters>			
 			<PresentationProperties>
 				<EnableZoomAndPanning>true</EnableZoomAndPanning>
@@ -3609,11 +3798,11 @@ chargeNeeded = false;]]></Body>
 				<RealTimeScale>1.0</RealTimeScale>
 			</PresentationProperties>
 			<ModelTimeProperties>
-				<StopOption><![CDATA[Stop at specified time]]></StopOption>
-				<InitialDate><![CDATA[1543219200000]]></InitialDate>	
+				<StopOption><![CDATA[Stop at specified date]]></StopOption>
+				<InitialDate><![CDATA[1543222800000]]></InitialDate>	
 				<InitialTime><![CDATA[0.0]]></InitialTime>	
-				<FinalDate><![CDATA[1548403200000]]></FinalDate>	
-				<FinalTime><![CDATA[86400.0]]></FinalTime>	
+				<FinalDate><![CDATA[1548439200000]]></FinalDate>	
+				<FinalTime><![CDATA[86940.0]]></FinalTime>	
 			</ModelTimeProperties>
 			<BypassInitialScreen>true</BypassInitialScreen>
 		</SimulationExperiment>	
