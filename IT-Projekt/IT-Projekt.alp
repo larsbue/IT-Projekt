@@ -272,7 +272,7 @@ import java.util.Map.Entry;]]></Import>
 						<UnitType><![CDATA[NONE]]></UnitType>
 						<SdArray>false</SdArray>
 						<DefaultValue Class="CodeValue">
-							<Code><![CDATA[1]]></Code>
+							<Code><![CDATA[2]]></Code>
 						</DefaultValue>
 						<ParameterEditor>
 							<Id>1643837652530</Id>
@@ -499,6 +499,47 @@ paketZuordnung();]]></Action>
 						<Condition><![CDATA[false]]></Condition>
 					</Properties>
 					<Action><![CDATA[openOrders = passengers.size();]]></Action>
+				</Event>
+				<Event>
+					<Id>1648314560828</Id>
+					<Name><![CDATA[checkBackInDepot]]></Name>
+					<X>980</X><Y>-180</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties TriggerType="timeout" Mode="cyclic">
+						<Timeout Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[MINUTE]]></Unit>
+						</Timeout>
+						<Rate Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="RateUnits"><![CDATA[PER_MINUTE]]></Unit>
+						</Rate>
+						<OccurrenceAtTime>true</OccurrenceAtTime>
+						<OccurrenceDate>1648368000000</OccurrenceDate>
+						<OccurrenceTime Class="CodeUnitValue">
+							<Code><![CDATA[workingHours]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[HOUR]]></Unit>
+						</OccurrenceTime>
+						<RecurrenceCode Class="CodeUnitValue">
+							<Code><![CDATA[5]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[MINUTE]]></Unit>
+						</RecurrenceCode>
+						<Condition><![CDATA[false]]></Condition>
+					</Properties>
+					<Action><![CDATA[int i = 0;
+for (Taxi t : taxis) {
+	if (t.backInDepot) {
+		i++;
+	}
+}
+if (i == numberTaxis) {
+	System.out.println("Alle Taxis sind wieder im Depot");
+	System.out.println("Simulation wird beendet");
+	finishSimulation();
+}]]></Action>
 				</Event>
 			</Events>
 			<Functions>
@@ -1599,7 +1640,11 @@ case 0:
 case 1: 
 	//Kundenkontakt
 	currentPassenger.changeState();
-	driveToNext();
+	if (chargeNeeded && passCollection.isEmpty()) {
+		driveToStand();
+	} else {
+		driveToNext();
+	}
 	break;
 case 2:
 	//Paket wurde ausgeliefert
@@ -1607,7 +1652,7 @@ case 2:
 	main.remove_paketstations(currentPaket);
 	driveToNext();
 	break;
-case 3:
+/*case 3:
 	//Taxi muss geladen werden
 	currentPassenger.changeState();
 	if (passCollection.isEmpty()) {
@@ -1615,11 +1660,12 @@ case 3:
 	} else {
 		driveToNext();
 	}
-	break;
+	break; */
 case 4: 
 	//Taxi im Depot
 	System.out.println("Fahre ins Depot!");
-	finishSimulation();
+	backInDepot = true;
+	//finishSimulation(); wenn alle Taxis im Depot sind
 	break;
 default:
 	driveToNext();
@@ -1771,6 +1817,21 @@ default:
 						<Type><![CDATA[boolean]]></Type>        
 						<InitialValue Class="CodeValue">
 							<Code><![CDATA[true]]></Code>
+						</InitialValue>
+					</Properties>
+				</Variable>
+				<Variable Class="PlainVariable">
+					<Id>1648314474320</Id>
+					<Name><![CDATA[backInDepot]]></Name>
+					<X>60</X><Y>310</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties SaveInSnapshot="true" Constant="false" AccessType="public" StaticVariable="false">
+						<Type><![CDATA[boolean]]></Type>        
+						<InitialValue Class="CodeValue">
+							<Code><![CDATA[false]]></Code>
 						</InitialValue>
 					</Properties>
 				</Variable>
@@ -2143,7 +2204,7 @@ if (!currentPassenger.waiting) {
 					<Body><![CDATA[currentRange -= distanceTo(target); //Verbrauch vom Auto
 main.totalDistance += distanceTo(target); //Insgesamt gefahrene Distanz
 if (currentRange < 50000) {
-	state = 3;
+	//state = 3;
 	chargeNeeded = true;
 	System.out.println("Muss laden!");
 }]]></Body>
